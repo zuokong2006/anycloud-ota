@@ -885,6 +885,16 @@ cy_rslt_t cy_OTA_JSON_callback(cy_JSON_object_t* json_object, void *arg)
                 }
                 memcpy(ctx->parsed_job.topic, val, val_len);
             }
+            else if (strncmp(obj, CY_OTA_IMAGE_NUMBER_FIELD, obj_len) == 0)
+            {
+                if (val_len < 1)
+                {
+                    IotLogWarn("Job parse: Image number too short!");
+                    ctx->parsed_job.image_num = 0;
+                } else {
+                    ctx->parsed_job.image_num = atoi(val);
+                }
+            }
         }
         break;
 
@@ -984,6 +994,7 @@ cy_rslt_t cy_ota_parse_job_info(cy_ota_context_t *ctx, const char *buffer, uint3
         return CY_RSLT_OTA_ERROR_MALFORMED_JOB_DOC;
     }
     IotLogInfo("  Unique Topic : %s", ctx->parsed_job.topic);
+    IotLogInfo("  Image Number : %d", ctx->parsed_job.image_num);
 
     /* validate version is higher than current application */
     if ( (APP_VERSION_MAJOR > ctx->parsed_job.ver_major) ||

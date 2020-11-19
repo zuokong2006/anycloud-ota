@@ -214,6 +214,7 @@ typedef struct cy_ota_job_parsed_info_s {
         cy_ota_server_info_t    broker_server;                              /**< Broker or Server holding OTA Image */
         char                    file[CY_OTA_HTTP_FILENAME_SIZE];            /**< File on Server (HTTP)              */
         char                    topic[CY_OTA_MQTT_UNIQUE_TOPIC_BUFF_SIZE];  /**< Unique Topic                       */
+        int                     image_num;                                  /**< Secondary image number             */
 } cy_ota_job_parsed_info_t;
 
 
