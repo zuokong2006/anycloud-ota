@@ -796,6 +796,7 @@ typedef struct
     const void                  *network_interface; /**< Application network interface for use by OTA       */
 
     cy_ota_update_flow_t        use_get_job_flow;   /**< Job Flow (CY_OTA_JOB_FLOW or CY_OTA_DIRECT_FLOW)   */
+    int                         image_num;
 } cy_ota_network_params_t;
 
 /**

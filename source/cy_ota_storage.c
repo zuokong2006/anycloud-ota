@@ -84,11 +84,11 @@
  * @return   0 on success
  *          -1 on error
  */
-static int eraseSlotTwo(void)
+static int eraseSlotTwo(int num)
 {
     const struct flash_area *fap;
 
-    if (flash_area_open(FLASH_AREA_IMAGE_SECONDARY(0), &fap) != 0)
+    if (flash_area_open(FLASH_AREA_IMAGE_SECONDARY(num), &fap) != 0)
     {
         IotLogError("%s() flash_area_open(FLASH_AREA_IMAGE_SECONDARY(0) ) failed\r\n", __func__);
         return -1;
@@ -128,11 +128,17 @@ cy_rslt_t cy_ota_storage_open(cy_ota_context_t *ctx)
     ctx->storage_loc         = NULL;
 
     /* erase secondary slot */
+    int image_num = 0;
+    if (ctx->network_params.use_get_job_flow == CY_OTA_DIRECT_FLOW) {
+        image_num = ctx->network_params.image_num;
+    } else {
+        image_num = ctx->parsed_job.image_num;
+    }
     IotLogWarn("Erasing Secondary Slot...\n");
-    eraseSlotTwo();
+    eraseSlotTwo(image_num);
     IotLogWarn("Erasing Secondary Slot Done.\n");
 
-    if (flash_area_open(FLASH_AREA_IMAGE_SECONDARY(0), &fap) != 0)
+    if (flash_area_open(FLASH_AREA_IMAGE_SECONDARY(image_num), &fap) != 0)
     {
         IotLogError("%s() flash_area_open(FLASH_AREA_IMAGE_SECONDARY(0) ) failed\r\n", __func__);
         return CY_RSLT_OTA_ERROR_OPEN_STORAGE;
