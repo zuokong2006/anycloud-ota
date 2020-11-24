@@ -86,8 +86,16 @@ int psoc6_smif_read(const struct flash_area *fap,
 
     addr = addr - CY_SMIF_BASE_MEM_OFFSET;
 
-    result = cy_serial_flash_qspi_read(addr, len, data);
+    //uint32_t interruptState = Cy_SysLib_EnterCriticalSection();
+    vTaskSuspendAll();
 
+    cy_serial_flash_qspi_enable_xip(false);
+    result = cy_serial_flash_qspi_read(addr, len, data);
+    cy_serial_flash_qspi_enable_xip(true);
+
+    xTaskResumeAll();
+    //Cy_SysLib_ExitCriticalSection(interruptState);
+    
     if (result == CY_RSLT_SUCCESS) {
         return (0);
     } else {
@@ -104,8 +112,17 @@ int psoc6_smif_write(const struct flash_area *fap,
 
     addr = addr - CY_SMIF_BASE_MEM_OFFSET;
 
-    result = cy_serial_flash_qspi_write(addr, len, data);
+    //uint32_t interruptState = Cy_SysLib_EnterCriticalSection();
+    vTaskSuspendAll();
 
+    cy_serial_flash_qspi_enable_xip(false);
+    result = cy_serial_flash_qspi_write(addr, len, data);
+    cy_serial_flash_qspi_enable_xip(true);
+
+    xTaskResumeAll();
+    //Cy_SysLib_ExitCriticalSection(interruptState);
+
+    printf("rc:0x%x\r\n", result);
     if (result == CY_RSLT_SUCCESS) {
         return (0);
     } else {
@@ -130,7 +147,15 @@ int psoc6_smif_erase(off_t addr, size_t size)
        length = ((size + min_erase_size) & (~(min_erase_size - 1)));
     }
 
+    //uint32_t interruptState = Cy_SysLib_EnterCriticalSection();
+    vTaskSuspendAll();
+
+    cy_serial_flash_qspi_enable_xip(false);
     result = cy_serial_flash_qspi_erase(address, length);
+    cy_serial_flash_qspi_enable_xip(true);
+
+    xTaskResumeAll();
+    //Cy_SysLib_ExitCriticalSection(interruptState);
 
     if (result == CY_RSLT_SUCCESS) {
         return (0);

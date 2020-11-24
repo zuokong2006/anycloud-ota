@@ -885,6 +885,16 @@ cy_rslt_t cy_OTA_JSON_callback(cy_JSON_object_t* json_object, void *arg)
                 }
                 memcpy(ctx->parsed_job.topic, val, val_len);
             }
+            else if (strncmp(obj, CY_OTA_IMAGE_NUMBER_FIELD, obj_len) == 0)
+            {
+                if (val_len < 1)
+                {
+                    IotLogWarn("Job parse: Image number too short!");
+                    ctx->parsed_job.image_num = 0;
+                } else {
+                    ctx->parsed_job.image_num = atoi(val);
+                }
+            }
         }
         break;
 
@@ -984,6 +994,7 @@ cy_rslt_t cy_ota_parse_job_info(cy_ota_context_t *ctx, const char *buffer, uint3
         return CY_RSLT_OTA_ERROR_MALFORMED_JOB_DOC;
     }
     IotLogInfo("  Unique Topic : %s", ctx->parsed_job.topic);
+    IotLogInfo("  Image Number : %d", ctx->parsed_job.image_num);
 
     /* validate version is higher than current application */
     if ( (APP_VERSION_MAJOR > ctx->parsed_job.ver_major) ||
@@ -2009,6 +2020,7 @@ cy_rslt_t cy_ota_agent_stop(cy_ota_context_ptr *ctx_handle)
     cy_rslt_t           result;
     uint32_t            waitfor;
     cy_ota_context_t    *ctx;
+    uint8_t retry_cnt = 0;
 
     /* sanity check */
     if (ctx_handle == NULL )
@@ -2025,17 +2037,23 @@ cy_rslt_t cy_ota_agent_stop(cy_ota_context_ptr *ctx_handle)
 
     ctx->curr_state = CY_OTA_STATE_EXITING;
 
-    /* Signal thread to end */
-    cy_rtos_setbits_event(&ctx->ota_event, CY_OTA_EVENT_SHUTDOWN_NOW, 0);
-
-    /* wait for signal from started thread */
-    waitfor = CY_OTA_EVENT_RUNNING_EXITING;
-    IotLogDebug("%s() Wait for Thread to exit\n", __func__);
-    result = cy_rtos_waitbits_event(&ctx->ota_event, &waitfor, 1, 1, 1000);
-    if (result != CY_RSLT_SUCCESS)
-    {
-        /* Thread exit failed ? */
-        IotLogError("%s() OTA Agent Thread Exit No response\n", __func__);
+    while(retry_cnt < 3) {
+        /* Signal thread to end */
+        cy_rtos_setbits_event(&ctx->ota_event, CY_OTA_EVENT_SHUTDOWN_NOW, 0);
+        /* wait for signal from started thread */
+        waitfor = CY_OTA_EVENT_RUNNING_EXITING;
+        IotLogDebug("%s() Wait for Thread to exit\n", __func__);
+        result = cy_rtos_waitbits_event(&ctx->ota_event, &waitfor, 1, 1, 1000);
+        if (result != CY_RSLT_SUCCESS)
+        {
+            /* Thread exit failed ? */
+            IotLogError("%s() OTA Agent Thread Exit No response\n", __func__);
+            continue;
+        } else {
+            IotLogDebug("%s() OTA Agent Thread Exit response\n", __func__);
+            break;
+        }
+        retry_cnt++;
     }
 
     /* wait for thread to exit */
