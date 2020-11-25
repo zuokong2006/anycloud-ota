@@ -312,7 +312,7 @@ int flash_area_write(const struct flash_area *fa, uint32_t off,
 #ifdef CY_BOOT_USE_EXTERNAL_FLASH
     else if ((fa->fa_device_id & FLASH_DEVICE_EXTERNAL_FLAG) == FLASH_DEVICE_EXTERNAL_FLAG)
     {
-        printf("write off:0x%x, size:%d\r\n", addr, len);
+        //printf("write off:0x%x, size:%d\r\n", addr, len);
         rc = psoc6_smif_write(fa, addr, src, len);
     }
 #endif

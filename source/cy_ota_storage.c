@@ -93,7 +93,6 @@ static int eraseSlotTwo(int num)
         IotLogError("%s() flash_area_open(FLASH_AREA_IMAGE_SECONDARY(0) ) failed\r\n", __func__);
         return -1;
     }
-    printf("off:0x%x\r\n", fap->fa_off);
     if (flash_area_erase(fap, 0, fap->fa_size) != 0)
     {
         IotLogError("%s() flash_area_erase(fap, 0) failed\r\n", __func__);
