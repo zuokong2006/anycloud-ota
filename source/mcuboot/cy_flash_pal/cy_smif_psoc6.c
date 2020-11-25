@@ -122,7 +122,6 @@ int psoc6_smif_write(const struct flash_area *fap,
     xTaskResumeAll();
     //Cy_SysLib_ExitCriticalSection(interruptState);
 
-    printf("rc:0x%x\r\n", result);
     if (result == CY_RSLT_SUCCESS) {
         return (0);
     } else {
