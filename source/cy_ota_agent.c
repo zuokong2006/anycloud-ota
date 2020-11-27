@@ -1711,29 +1711,36 @@ static void cy_ota_agent( cy_thread_arg_t arg )
                             cy_ota_set_last_error(ctx, cy_ota_state_table[idx].failure_result);
                         }
                         if (result != CY_RSLT_SUCCESS) {
-                            /* call the App callback function with failure if there is a reason */
-                            cb_result = CY_OTA_CB_RSLT_OTA_CONTINUE;
-                            cb_result = cy_ota_internal_call_cb(ctx, CY_OTA_REASON_FAILURE, ctx->curr_state);
-                            switch( cb_result )
-                            {
-                            default:
-                            case CY_OTA_CB_RSLT_OTA_CONTINUE:
-                                /* nothing to do here */
-                                break;
-                            case CY_OTA_CB_RSLT_OTA_STOP:
-                                IotLogError("App callback FAILURE for state %s - App returned Stop OTA session",
-                                    cy_ota_get_state_string(cy_ota_state_table[idx].curr_state));
-                                result = CY_RSLT_OTA_ERROR_APP_RETURNED_STOP;
-                                ctx->stop_OTA_session = 1;
-                                break;
-                            case CY_OTA_CB_RSLT_APP_SUCCESS:
-                                /* don't care about success here */
-                                break;
-                            case CY_OTA_CB_RSLT_APP_FAILED:
-                                /* nothing to do here */
-                                IotLogError("App callback FAILURE for state %s - App returned failure.",
-                                    cy_ota_get_state_string(cy_ota_state_table[idx].curr_state));
-                                break;
+                            /* Data Download failed */
+                            /* We may be heading for a data download retry. */
+                            if ( (ctx->curr_state == CY_OTA_STATE_DATA_DOWNLOAD) && (cy_ota_last_error == CY_RSLT_OTA_ERROR_GET_DATA) 
+                                && (ctx->download_retry_count < CY_OTA_MAX_DOWNLOAD_TRIES)) {
+                                IotLogDebug("\n\n\nData download retry: %d\n", (ctx->download_retry_count +1));
+                            } else {
+                                /* call the App callback function with failure if there is a reason */
+                                cb_result = CY_OTA_CB_RSLT_OTA_CONTINUE;
+                                cb_result = cy_ota_internal_call_cb(ctx, CY_OTA_REASON_FAILURE, ctx->curr_state);
+                                switch( cb_result )
+                                {
+                                default:
+                                case CY_OTA_CB_RSLT_OTA_CONTINUE:
+                                    /* nothing to do here */
+                                    break;
+                                case CY_OTA_CB_RSLT_OTA_STOP:
+                                    IotLogError("App callback FAILURE for state %s - App returned Stop OTA session",
+                                        cy_ota_get_state_string(cy_ota_state_table[idx].curr_state));
+                                    result = CY_RSLT_OTA_ERROR_APP_RETURNED_STOP;
+                                    ctx->stop_OTA_session = 1;
+                                    break;
+                                case CY_OTA_CB_RSLT_APP_SUCCESS:
+                                    /* don't care about success here */
+                                    break;
+                                case CY_OTA_CB_RSLT_APP_FAILED:
+                                    /* nothing to do here */
+                                    IotLogError("App callback FAILURE for state %s - App returned failure.",
+                                        cy_ota_get_state_string(cy_ota_state_table[idx].curr_state));
+                                    break;
+                                }
                             }
                         }
                     }
