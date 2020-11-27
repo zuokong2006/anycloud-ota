@@ -57,6 +57,9 @@
 #include "cy_serial_flash_qspi.h"
 #include "cybsp_types.h"
 
+/* FreeRTOS header file */
+#include <FreeRTOS.h>
+#include <task.h>
 
 #define MEM_SLOT_NUM            (0u)      /* Slot number of the memory to use */
 #define QSPI_BUS_FREQUENCY_HZ   (50000000lu)
@@ -93,7 +96,9 @@ int psoc6_smif_read(const struct flash_area *fap,
     result = cy_serial_flash_qspi_read(addr, len, data);
     cy_serial_flash_qspi_enable_xip(true);
 
-    xTaskResumeAll();
+    if(!xTaskResumeAll()) {
+        taskYIELD();
+    }
     //Cy_SysLib_ExitCriticalSection(interruptState);
     
     if (result == CY_RSLT_SUCCESS) {
@@ -119,7 +124,9 @@ int psoc6_smif_write(const struct flash_area *fap,
     result = cy_serial_flash_qspi_write(addr, len, data);
     cy_serial_flash_qspi_enable_xip(true);
 
-    xTaskResumeAll();
+    if(!xTaskResumeAll()) {
+        taskYIELD();
+    }
     //Cy_SysLib_ExitCriticalSection(interruptState);
 
     if (result == CY_RSLT_SUCCESS) {
@@ -153,7 +160,9 @@ int psoc6_smif_erase(off_t addr, size_t size)
     result = cy_serial_flash_qspi_erase(address, length);
     cy_serial_flash_qspi_enable_xip(true);
 
-    xTaskResumeAll();
+    if(!xTaskResumeAll()) {
+        taskYIELD();
+    }
     //Cy_SysLib_ExitCriticalSection(interruptState);
 
     if (result == CY_RSLT_SUCCESS) {
