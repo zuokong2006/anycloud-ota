@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 // change to IOT_LOG_DEBUG for lots of output
-#define LIBRARY_LOG_LEVEL   IOT_LOG_DEBUG //IOT_LOG_INFO
+#define LIBRARY_LOG_LEVEL   IOT_LOG_WARN //IOT_LOG_DEBUG //IOT_LOG_INFO
 #define LIBRARY_LOG_NAME    "OTA"
 
 #include "iot_logging_setup.h"
