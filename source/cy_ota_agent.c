@@ -2075,6 +2075,7 @@ cy_rslt_t cy_ota_agent_stop(cy_ota_context_ptr *ctx_handle)
     /* clear events */
     cy_rtos_deinit_event(&ctx->ota_event);
 
+    cy_rtos_delay_milliseconds(2000);
     memset(ctx, 0x00, sizeof(cy_ota_context_t) );
     free(ctx);
 
