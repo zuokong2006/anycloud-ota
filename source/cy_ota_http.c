@@ -717,6 +717,10 @@ cy_rslt_t cy_ota_http_connect(cy_ota_context_t *ctx)
             credentials = NULL;
     }
 
+    if(credentials != NULL) {
+    	cy_rtos_delay_milliseconds(1000);
+    }
+
     /* create the secure socket and connect to the server - this is a blocking call */
     IotLogDebug("Connecting to HTTP Server credentials:%p server:%s:%d",
                credentials, (server->pHostName == NULL) ? "None" : server->pHostName, server->port);
