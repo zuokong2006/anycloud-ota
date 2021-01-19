@@ -79,18 +79,18 @@
  * @return   0 on success
  *          -1 on error
  */
-static int eraseSlotTwo(void)
+static int eraseSlotTwo(int num)
 {
     const struct flash_area *fap;
 
-    if (flash_area_open(FLASH_AREA_IMAGE_SECONDARY(0), &fap) != 0)
+    if (flash_area_open(FLASH_AREA_IMAGE_SECONDARY(num), &fap) != 0)
     {
-        cy_log_msg(CYLF_OTA, CY_LOG_ERR, "%s() flash_area_open(FLASH_AREA_IMAGE_SECONDARY(0) ) failed\n", __func__);
+        cy_log_msg(CYLF_OTA, CY_LOG_ERR, "%s() flash_area_open(FLASH_AREA_IMAGE_SECONDARY(%d) ) failed\n", __func__, num);
         return -1;
     }
     if (flash_area_erase(fap, 0, fap->fa_size) != 0)
     {
-        cy_log_msg(CYLF_OTA, CY_LOG_ERR, "%s() flash_area_erase(fap, 0) failed\r\n", __func__);
+        cy_log_msg(CYLF_OTA, CY_LOG_ERR, "%s() flash_area_erase(fap, %d) failed\r\n", __func__, num);
         return -1;
     }
 
@@ -125,7 +125,10 @@ cy_rslt_t cy_ota_storage_open(cy_ota_context_ptr ctx_ptr)
 
     /* erase secondary slot */
     cy_log_msg(CYLF_OTA, CY_LOG_NOTICE, "Erasing Secondary Slot...\n");
-    eraseSlotTwo();
+    eraseSlotTwo(0);
+#if (MCUBOOT_IMAGE_NUMBER == 2)
+    eraseSlotTwo(1);
+#endif
     cy_log_msg(CYLF_OTA, CY_LOG_NOTICE, "Erasing Secondary Slot Done.\n");
 
     if (flash_area_open(FLASH_AREA_IMAGE_SECONDARY(0), &fap) != 0)

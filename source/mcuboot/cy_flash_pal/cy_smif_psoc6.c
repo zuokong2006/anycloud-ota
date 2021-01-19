@@ -57,6 +57,9 @@
 #include "cy_serial_flash_qspi.h"
 #include "cybsp_types.h"
 
+/* FreeRTOS header file */
+#include <FreeRTOS.h>
+#include <task.h>
 
 #define MEM_SLOT_NUM            (0u)      /* Slot number of the memory to use */
 #define QSPI_BUS_FREQUENCY_HZ   (50000000lu)
@@ -86,8 +89,22 @@ int psoc6_smif_read(const struct flash_area *fap,
 
     addr = addr - CY_SMIF_BASE_MEM_OFFSET;
 
-    result = cy_serial_flash_qspi_read(addr, len, data);
+    vTaskSuspendAll();
+    // Cy_SysTick_Disable();
+    // __NVIC_DisableIRQ(PendSV_IRQn);
+    // __NVIC_DisableIRQ(SVCall_IRQn);
 
+    cy_serial_flash_qspi_enable_xip(false);
+    result = cy_serial_flash_qspi_read(addr, len, data);
+    cy_serial_flash_qspi_enable_xip(true);
+
+    // __NVIC_EnableIRQ(SVCall_IRQn);
+    // __NVIC_EnableIRQ(PendSV_IRQn);
+    // Cy_SysTick_Enable();
+    if(!xTaskResumeAll()) {
+       taskYIELD();
+    }
+    
     if (result == CY_RSLT_SUCCESS) {
         return (0);
     } else {
@@ -104,7 +121,21 @@ int psoc6_smif_write(const struct flash_area *fap,
 
     addr = addr - CY_SMIF_BASE_MEM_OFFSET;
 
+    vTaskSuspendAll();
+    // Cy_SysTick_Disable();
+    // __NVIC_DisableIRQ(PendSV_IRQn);
+    // __NVIC_DisableIRQ(SVCall_IRQn);
+
+    cy_serial_flash_qspi_enable_xip(false);
     result = cy_serial_flash_qspi_write(addr, len, data);
+    cy_serial_flash_qspi_enable_xip(true);
+
+    // __NVIC_EnableIRQ(SVCall_IRQn);
+    // __NVIC_EnableIRQ(PendSV_IRQn);
+    // Cy_SysTick_Enable();
+    if(!xTaskResumeAll()) {
+       taskYIELD();
+    }
 
     if (result == CY_RSLT_SUCCESS) {
         return (0);
@@ -130,7 +161,21 @@ int psoc6_smif_erase(off_t addr, size_t size)
        length = ((size + min_erase_size) & (~(min_erase_size - 1)));
     }
 
+    vTaskSuspendAll();
+    // Cy_SysTick_Disable();
+    // __NVIC_DisableIRQ(PendSV_IRQn);
+    // __NVIC_DisableIRQ(SVCall_IRQn);
+
+    cy_serial_flash_qspi_enable_xip(false);
     result = cy_serial_flash_qspi_erase(address, length);
+    cy_serial_flash_qspi_enable_xip(true);
+
+    // __NVIC_EnableIRQ(SVCall_IRQn);
+    // __NVIC_EnableIRQ(PendSV_IRQn);
+    // Cy_SysTick_Enable();
+    if(!xTaskResumeAll()) {
+       taskYIELD();
+    }
 
     if (result == CY_RSLT_SUCCESS) {
         return (0);
