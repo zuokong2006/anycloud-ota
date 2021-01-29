@@ -577,7 +577,7 @@ cy_rslt_t cy_ota_http_connect(cy_ota_context_t *ctx)
         cy_http_client_deinit();
         return CY_RSLT_OTA_ERROR_CONNECT;
     }
-    result = cy_http_client_connect(ctx->http.connection, 1000, 1000); // TODO: No magic numbers for the timeouts
+    result = cy_http_client_connect(ctx->http.connection, 50, 50); // TODO: No magic numbers for the timeouts
     if (result != CY_RSLT_SUCCESS)
     {
         cy_log_msg(CYLF_OTA, CY_LOG_ERR, "%s() cy_http_client_connect() failed %d.\n", __func__, result);
