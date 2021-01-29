@@ -90,17 +90,11 @@ int psoc6_smif_read(const struct flash_area *fap,
     addr = addr - CY_SMIF_BASE_MEM_OFFSET;
 
     vTaskSuspendAll();
-    // Cy_SysTick_Disable();
-    // __NVIC_DisableIRQ(PendSV_IRQn);
-    // __NVIC_DisableIRQ(SVCall_IRQn);
 
     cy_serial_flash_qspi_enable_xip(false);
     result = cy_serial_flash_qspi_read(addr, len, data);
     cy_serial_flash_qspi_enable_xip(true);
 
-    // __NVIC_EnableIRQ(SVCall_IRQn);
-    // __NVIC_EnableIRQ(PendSV_IRQn);
-    // Cy_SysTick_Enable();
     if(!xTaskResumeAll()) {
        taskYIELD();
     }
@@ -122,17 +116,11 @@ int psoc6_smif_write(const struct flash_area *fap,
     addr = addr - CY_SMIF_BASE_MEM_OFFSET;
 
     vTaskSuspendAll();
-    // Cy_SysTick_Disable();
-    // __NVIC_DisableIRQ(PendSV_IRQn);
-    // __NVIC_DisableIRQ(SVCall_IRQn);
 
     cy_serial_flash_qspi_enable_xip(false);
     result = cy_serial_flash_qspi_write(addr, len, data);
     cy_serial_flash_qspi_enable_xip(true);
 
-    // __NVIC_EnableIRQ(SVCall_IRQn);
-    // __NVIC_EnableIRQ(PendSV_IRQn);
-    // Cy_SysTick_Enable();
     if(!xTaskResumeAll()) {
        taskYIELD();
     }
@@ -162,17 +150,11 @@ int psoc6_smif_erase(off_t addr, size_t size)
     }
 
     vTaskSuspendAll();
-    // Cy_SysTick_Disable();
-    // __NVIC_DisableIRQ(PendSV_IRQn);
-    // __NVIC_DisableIRQ(SVCall_IRQn);
 
     cy_serial_flash_qspi_enable_xip(false);
     result = cy_serial_flash_qspi_erase(address, length);
     cy_serial_flash_qspi_enable_xip(true);
 
-    // __NVIC_EnableIRQ(SVCall_IRQn);
-    // __NVIC_EnableIRQ(PendSV_IRQn);
-    // Cy_SysTick_Enable();
     if(!xTaskResumeAll()) {
        taskYIELD();
     }
