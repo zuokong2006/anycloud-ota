@@ -159,7 +159,7 @@ _Static_assert(BOOT_IMAGE_NUMBER > 0, "Invalid value for BOOT_IMAGE_NUMBER");
  * TODO: make flashmap API receive the current sector array size.
  */
 #if BOOT_MAX_IMG_SECTORS < 32
-#error "Too few sectors, please increase BOOT_MAX_IMG_SECTORS to at least 32"
+//#error "Too few sectors, please increase BOOT_MAX_IMG_SECTORS to at least 32"
 #endif
 
 /** Maximum number of image sectors supported by the bootloader. */

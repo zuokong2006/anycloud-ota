@@ -28,6 +28,8 @@
 #include "bootutil_priv.h"
 #include "bootutil/bootutil_log.h"
 
+#include "swap_status.h"
+
 const uint32_t boot_img_magic[] = {
     0xf395c277,
     0x7fefd260,
@@ -133,6 +135,39 @@ boot_magic_compatible_check(uint8_t tbl_val, uint8_t val)
     }
 }
 
+#if defined(MCUBOOT_SWAP_USING_STATUS)
+/* Offset Section */
+static inline uint32_t
+boot_magic_off(const struct flash_area *fap)
+{
+    (void)fap;
+    return BOOT_SWAP_STATUS_D_SIZE_RAW - BOOT_MAGIC_SZ;
+}
+
+uint32_t
+boot_image_ok_off(const struct flash_area *fap)
+{
+    return boot_magic_off(fap) - 1;
+}
+
+uint32_t
+boot_copy_done_off(const struct flash_area *fap)
+{
+    return boot_image_ok_off(fap) - 1;
+}
+
+uint32_t
+boot_swap_info_off(const struct flash_area *fap)
+{
+    return boot_copy_done_off(fap) - 1;
+}
+
+uint32_t
+boot_swap_size_off(const struct flash_area *fap)
+{
+    return boot_swap_info_off(fap) - 4;
+}
+#else
 static inline uint32_t
 boot_magic_off(const struct flash_area *fap)
 {
@@ -162,7 +197,188 @@ boot_swap_size_off(const struct flash_area *fap)
 {
     return boot_swap_info_off(fap) - BOOT_MAX_ALIGN;
 }
+#endif
 
+#if defined(MCUBOOT_SWAP_USING_STATUS)
+int
+boot_read_data_empty(const struct flash_area *fap, void *data, uint32_t len)
+{
+    uint8_t *buf;
+
+    buf = (uint8_t *)data;
+    for (uint32_t i = 0; i < len; i++) {
+        if (buf[i] != flash_area_erased_val(fap)) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+int
+boot_read_swap_state(const struct flash_area *fap,
+                     struct boot_swap_state *state)
+{
+    uint32_t magic[BOOT_MAGIC_ARR_SZ];
+    uint32_t off;
+    uint32_t trailer_off = 0;
+    uint8_t swap_info;
+    int rc;
+    uint32_t erase_trailer = 0;
+
+    const struct flash_area *fap_stat;
+
+    rc = flash_area_open(FLASH_AREA_IMAGE_SWAP_STATUS, &fap_stat);
+    if (rc != 0) {
+        return BOOT_EFLASH;
+    }
+
+    off = boot_magic_off(fap);
+    /* retrieve value for magic field from status partition area */
+    rc = swap_status_retrieve(fap->fa_id, off, magic, BOOT_MAGIC_SZ);
+    if (rc < 0) {
+        return BOOT_EFLASH;
+    }
+    rc = boot_read_data_empty(fap_stat, magic, BOOT_MAGIC_SZ);
+    if (rc < 0) {
+        return BOOT_EFLASH;
+    }
+    /* fill magic number value if equal to expected */
+    if (rc == 1) {
+
+        state->magic = BOOT_MAGIC_UNSET;
+
+        /* attempt to find magic in upgrade img slot trailer */
+        if (fap->fa_id == FLASH_AREA_IMAGE_1 ||
+            fap->fa_id == FLASH_AREA_IMAGE_3) {
+
+                trailer_off = fap->fa_size - BOOT_MAGIC_SZ;
+
+                rc = flash_area_read_is_empty(fap, trailer_off, magic, BOOT_MAGIC_SZ);
+                if (rc < 0) {
+                    return BOOT_EFLASH;
+                }
+                if (rc == 1) {
+                    state->magic = BOOT_MAGIC_UNSET;
+                } else {
+                    state->magic = boot_magic_decode(magic);
+                    /* put magic to status partition for upgrade slot*/
+                    if (state->magic == BOOT_MAGIC_GOOD) {
+                        rc = swap_status_update(fap->fa_id, off,
+                                        magic, BOOT_MAGIC_SZ);
+                    }
+                    if (rc < 0) {
+                        return BOOT_EFLASH;
+                    } else {
+                        erase_trailer = 1;
+                    }
+                }
+        }
+    } else {
+        state->magic = boot_magic_decode(magic);
+    }
+    off = boot_swap_info_off(fap);
+    rc = swap_status_retrieve(fap->fa_id, off, &swap_info, sizeof swap_info);
+    if (rc < 0) {
+        return BOOT_EFLASH;
+    }
+    rc = boot_read_data_empty(fap_stat, &swap_info, sizeof swap_info);
+    if (rc < 0) {
+        return BOOT_EFLASH;
+    }
+    /* Extract the swap type and image number */
+    state->swap_type = BOOT_GET_SWAP_TYPE(swap_info);
+    state->image_num = BOOT_GET_IMAGE_NUM(swap_info);
+
+    if (rc == 1 || state->swap_type > BOOT_SWAP_TYPE_REVERT) {
+        state->swap_type = BOOT_SWAP_TYPE_NONE;
+        state->image_num = 0;
+    }
+
+    off = boot_copy_done_off(fap);
+    rc = swap_status_retrieve(fap->fa_id, off, &state->copy_done, sizeof state->copy_done);
+    if (rc < 0) {
+        return BOOT_EFLASH;
+    }
+    rc = boot_read_data_empty(fap_stat, &state->copy_done, sizeof state->copy_done);
+    /* need to check swap_info was empty */
+    if (rc < 0) {
+       return BOOT_EFLASH;
+    }
+    if (rc == 1) {
+       state->copy_done = BOOT_FLAG_UNSET;
+    } else {
+       state->copy_done = boot_flag_decode(state->copy_done);
+    }
+
+    off = boot_image_ok_off(fap);
+    rc = swap_status_retrieve(fap->fa_id, off, &state->image_ok, sizeof state->image_ok);
+    if (rc < 0) {
+       return BOOT_EFLASH;
+    }
+    rc = boot_read_data_empty(fap_stat, &state->image_ok, sizeof state->image_ok);
+    /* need to check swap_info was empty */
+    if (rc < 0) {
+       return BOOT_EFLASH;
+    }
+    if (rc == 1) {
+        /* assign img_ok unset */
+        state->image_ok = BOOT_FLAG_UNSET;
+
+        /* attempt to read img_ok value in upgrade img slots trailer area
+         * it is set when image in slot for upgrade is signed for swap_type permanent
+        */
+        uint32_t process_image_ok = 0;
+        switch (fap->fa_id) {
+        case FLASH_AREA_IMAGE_0:
+        case FLASH_AREA_IMAGE_2:
+            if (state->copy_done == BOOT_FLAG_SET)
+                process_image_ok = 1;
+        break;
+        case FLASH_AREA_IMAGE_1:
+        case FLASH_AREA_IMAGE_3:
+            process_image_ok = 1;
+        break;
+        default:
+            return BOOT_EFLASH;
+        break;
+        }
+        if (process_image_ok != 0) {
+            trailer_off = fap->fa_size - BOOT_MAGIC_SZ - BOOT_MAX_ALIGN;
+
+            rc = flash_area_read_is_empty(fap, trailer_off, &state->image_ok, sizeof state->image_ok);
+            if (rc < 0) {
+                return BOOT_EFLASH;
+            }
+            if (rc == 1) {
+                state->image_ok = BOOT_FLAG_UNSET;
+            } else {
+                state->image_ok = boot_flag_decode(state->image_ok);
+                /* put img_ok to status partition for upgrade slot */
+                if (state->image_ok != BOOT_FLAG_BAD) {
+                    rc = swap_status_update(fap->fa_id, off,
+                                &state->image_ok, sizeof state->image_ok);
+                }
+                if (rc < 0) {
+                    return BOOT_EFLASH;
+                } else {
+                    /* mark img trailer needs to be erased */
+                    erase_trailer = 1;
+                }
+            }
+        }
+    } else {
+       state->image_ok = boot_flag_decode(state->image_ok);
+    }
+
+    if (erase_trailer != 0) {
+        /* erase magic from upgrade img trailer */
+        rc = flash_area_erase(fap, trailer_off, BOOT_MAGIC_SZ);
+        if (rc != 0)
+            return rc;
+    }
+    return 0;
+}
+#else
 int
 boot_read_swap_state(const struct flash_area *fap,
                      struct boot_swap_state *state)
@@ -179,8 +395,10 @@ boot_read_swap_state(const struct flash_area *fap,
     }
     if (rc == 1) {
         state->magic = BOOT_MAGIC_UNSET;
+        printf("boot_read_swap_state BOOT_MAGIC_UNSET\r\n");
     } else {
         state->magic = boot_magic_decode(magic);
+        printf("boot_read_swap_state magic\r\n");
     }
 
     off = boot_swap_info_off(fap);
@@ -206,6 +424,7 @@ boot_read_swap_state(const struct flash_area *fap,
     }
     if (rc == 1) {
         state->copy_done = BOOT_FLAG_UNSET;
+        printf("boot_read_swap_state state->copy_done BOOT_FLAG_UNSET\r\n");
     } else {
         state->copy_done = boot_flag_decode(state->copy_done);
     }
@@ -218,12 +437,14 @@ boot_read_swap_state(const struct flash_area *fap,
     }
     if (rc == 1) {
         state->image_ok = BOOT_FLAG_UNSET;
+        printf("boot_read_swap_state state->image_ok BOOT_FLAG_UNSET\r\n");
     } else {
         state->image_ok = boot_flag_decode(state->image_ok);
     }
 
     return 0;
 }
+#endif
 
 /**
  * Reads the image trailer from the scratch area.
@@ -263,6 +484,26 @@ boot_write_magic(const struct flash_area *fap)
     return 0;
 }
 
+#if defined(MCUBOOT_SWAP_USING_STATUS)
+/**
+ * Write trailer data; status bytes, swap_size, etc
+ *
+ * @returns 0 on success, != 0 on error.
+ */
+static int
+boot_write_trailer(const struct flash_area *fap, uint32_t off,
+        const uint8_t *inbuf, uint8_t inlen)
+{
+    int rc;
+
+    rc = swap_status_update(fap->fa_id, off, inbuf, inlen);
+
+    if (rc != 0) {
+        return BOOT_EFLASH;
+    }
+    return rc;
+}
+#else
 /**
  * Write trailer data; status bytes, swap_size, etc
  *
@@ -295,6 +536,7 @@ boot_write_trailer(const struct flash_area *fap, uint32_t off,
 
     return 0;
 }
+#endif
 
 static int
 boot_write_trailer_flag(const struct flash_area *fap, uint32_t off,
@@ -515,14 +757,17 @@ boot_set_confirmed(void)
     switch (state_primary_slot.magic) {
     case BOOT_MAGIC_GOOD:
         /* Confirm needed; proceed. */
+        printf("boot_set_confirmed BOOT_MAGIC_GOOD\r\n");
         break;
 
     case BOOT_MAGIC_UNSET:
         /* Already confirmed. */
+        printf("boot_set_confirmed BOOT_MAGIC_UNSET\r\n");
         return 0;
 
     case BOOT_MAGIC_BAD:
         /* Unexpected state. */
+        printf("boot_set_confirmed BOOT_MAGIC_BAD\r\n");
         return BOOT_EBADVECT;
     }
 
@@ -534,16 +779,22 @@ boot_set_confirmed(void)
 
     if (state_primary_slot.copy_done == BOOT_FLAG_UNSET) {
         /* Swap never completed.  This is unexpected. */
+        printf("boot_set_confirmed copy_done == BOOT_FLAG_UNSET\r\n");
         rc = BOOT_EBADVECT;
         goto done;
     }
 
     if (state_primary_slot.image_ok != BOOT_FLAG_UNSET) {
         /* Already confirmed. */
+        printf("boot_set_confirmed image_ok != BOOT_FLAG_UNSET\r\n");
         goto done;
     }
 
+    printf("boot_set_confirmed boot_write_image_ok\r\n");
     rc = boot_write_image_ok(fap);
+    if(rc != 0) {
+        printf("boot_set_confirmed boot_write_image_ok error\r\n");
+    }
 
 done:
     flash_area_close(fap);

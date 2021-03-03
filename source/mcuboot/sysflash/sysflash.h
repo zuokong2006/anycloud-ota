@@ -13,6 +13,7 @@
 #define FLASH_AREA_IMAGE_SCRATCH 3
 #define FLASH_AREA_IMAGE_2 5
 #define FLASH_AREA_IMAGE_3 6
+#define FLASH_AREA_IMAGE_SWAP_STATUS 7
 
 /* use PDL-defined offset or one from SMIF config */
 #define CY_SMIF_BASE_MEM_OFFSET             (0x18000000)
