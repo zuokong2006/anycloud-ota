@@ -395,10 +395,8 @@ boot_read_swap_state(const struct flash_area *fap,
     }
     if (rc == 1) {
         state->magic = BOOT_MAGIC_UNSET;
-        printf("boot_read_swap_state BOOT_MAGIC_UNSET\r\n");
     } else {
         state->magic = boot_magic_decode(magic);
-        printf("boot_read_swap_state magic\r\n");
     }
 
     off = boot_swap_info_off(fap);
@@ -424,7 +422,6 @@ boot_read_swap_state(const struct flash_area *fap,
     }
     if (rc == 1) {
         state->copy_done = BOOT_FLAG_UNSET;
-        printf("boot_read_swap_state state->copy_done BOOT_FLAG_UNSET\r\n");
     } else {
         state->copy_done = boot_flag_decode(state->copy_done);
     }
@@ -437,7 +434,6 @@ boot_read_swap_state(const struct flash_area *fap,
     }
     if (rc == 1) {
         state->image_ok = BOOT_FLAG_UNSET;
-        printf("boot_read_swap_state state->image_ok BOOT_FLAG_UNSET\r\n");
     } else {
         state->image_ok = boot_flag_decode(state->image_ok);
     }
@@ -757,17 +753,14 @@ boot_set_confirmed(void)
     switch (state_primary_slot.magic) {
     case BOOT_MAGIC_GOOD:
         /* Confirm needed; proceed. */
-        printf("boot_set_confirmed BOOT_MAGIC_GOOD\r\n");
         break;
 
     case BOOT_MAGIC_UNSET:
         /* Already confirmed. */
-        printf("boot_set_confirmed BOOT_MAGIC_UNSET\r\n");
         return 0;
 
     case BOOT_MAGIC_BAD:
         /* Unexpected state. */
-        printf("boot_set_confirmed BOOT_MAGIC_BAD\r\n");
         return BOOT_EBADVECT;
     }
 
@@ -779,22 +772,16 @@ boot_set_confirmed(void)
 
     if (state_primary_slot.copy_done == BOOT_FLAG_UNSET) {
         /* Swap never completed.  This is unexpected. */
-        printf("boot_set_confirmed copy_done == BOOT_FLAG_UNSET\r\n");
         rc = BOOT_EBADVECT;
         goto done;
     }
 
     if (state_primary_slot.image_ok != BOOT_FLAG_UNSET) {
         /* Already confirmed. */
-        printf("boot_set_confirmed image_ok != BOOT_FLAG_UNSET\r\n");
         goto done;
     }
 
-    printf("boot_set_confirmed boot_write_image_ok\r\n");
     rc = boot_write_image_ok(fap);
-    if(rc != 0) {
-        printf("boot_set_confirmed boot_write_image_ok error\r\n");
-    }
 
 done:
     flash_area_close(fap);

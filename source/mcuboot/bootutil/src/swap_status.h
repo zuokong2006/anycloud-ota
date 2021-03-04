@@ -65,7 +65,7 @@ struct image_status_trailer {
 #define BOOT_SWAP_STATUS_CNT_SZ         4UL
 #define BOOT_SWAP_STATUS_CRC_SZ         4UL
 
-#define BOOT_SWAP_STATUS_ROW_SZ         512 //CY_FLASH_ALIGN
+#define BOOT_SWAP_STATUS_ROW_SZ         (512) //CY_FLASH_ALIGN
 
 /* agreed to name it "a record" */
 #define BOOT_SWAP_STATUS_PAYLD_SZ       (BOOT_SWAP_STATUS_ROW_SZ -\
@@ -133,12 +133,9 @@ struct status_part_record{
 #define BOOT_SWAP_STATUS_OFFS_SEC   (BOOT_SWAP_STATUS_OFFS_PRIM + \
                                     BOOT_SWAP_STATUS_SZ_PRIM)
 
-//int32_t swap_status_init_offset(uint32_t area_id);
 int swap_status_update(uint32_t target_area_id, uint32_t offs, const void *data, uint32_t len);
 int swap_status_retrieve(uint32_t target_area_id, uint32_t offs, void *data, uint32_t len);
 
-//int boot_write_trailer(const struct flash_area *fap, uint32_t off,
-//                        const uint8_t *inbuf, uint8_t inlen);
 
 #endif /* MCUBOOT_SWAP_USING_STATUS */
 
